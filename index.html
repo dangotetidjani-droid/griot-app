@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Griot — Générateur de titres viraux</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#17130F;
+  --bg-raised:#1F1913;
+  --line:#372E24;
+  --gold:#C89550;
+  --gold-bright:#E0B87A;
+  --wine:#7A2E2E;
+  --wine-bright:#8F3838;
+  --cream:#F3EADC;
+  --muted:#A69884;
+  --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+
+body{
+  background:var(--bg);
+  color:var(--cream);
+  font-family:var(--font-body);
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  padding:32px 20px 60px;
+  line-height:1.5;
+}
+
+main{width:100%; max-width:460px;}
+
+header{margin-bottom:32px;}
+
+.wordmark{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-weight:500;
+  font-size:2.1rem;
+  color:var(--gold-bright);
+  letter-spacing:0.01em;
+}
+
+.tagline{
+  color:var(--muted);
+  font-size:0.95rem;
+  margin-top:6px;
+  max-width:34ch;
+}
+
+.field-label{
+  display:block;
+  font-size:0.85rem;
+  color:var(--muted);
+  margin-bottom:8px;
+}
+
+textarea{
+  width:100%;
+  background:var(--bg-raised);
+  border:1px solid var(--line);
+  border-radius:4px;
+  color:var(--cream);
+  font-family:var(--font-body);
+  font-size:0.98rem;
+  padding:12px 14px;
+  resize:vertical;
+  min-height:64px;
+}
+
+textarea:focus{
+  outline:2px solid var(--gold);
+  outline-offset:1px;
+  border-color:var(--gold);
+}
+
+textarea::placeholder{color:#6B5F51;}
+
+select{
+  width:100%;
+  background:var(--bg-raised);
+  border:1px solid var(--line);
+  border-radius:4px;
+  color:var(--cream);
+  font-family:var(--font-body);
+  font-size:0.95rem;
+  padding:11px 14px;
+  margin-top:8px;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23A69884' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+}
+
+select:focus{
+  outline:2px solid var(--gold);
+  outline-offset:1px;
+  border-color:var(--gold);
+}
+
+button.generate{
+  width:100%;
+  margin-top:14px;
+  background:var(--wine);
+  color:var(--cream);
+  border:none;
+  border-radius:4px;
+  padding:13px 16px;
+  font-family:var(--font-body);
+  font-weight:500;
+  font-size:0.98rem;
+  cursor:pointer;
+  transition:background 0.15s ease;
+}
+
+button.generate:hover:not(:disabled){background:var(--wine-bright);}
+button.generate:disabled{opacity:0.6; cursor:default;}
+button.generate:focus-visible{outline:2px solid var(--gold-bright); outline-offset:2px;}
+
+section.results{margin-top:36px;}
+
+.empty-state{
+  font-family:var(--font-display);
+  font-style:italic;
+  color:var(--muted);
+  font-size:1.05rem;
+  padding:20px 0;
+}
+
+.error-state{
+  color:var(--gold-bright);
+  font-size:0.92rem;
+  padding:16px 0;
+}
+
+.title-item{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  padding:16px 0;
+  border-bottom:1px solid var(--line);
+  opacity:0;
+  animation:reveal 0.4s ease forwards;
+}
+
+.title-item:last-child{border-bottom:none;}
+
+@keyframes reveal{
+  from{opacity:0; transform:translateY(6px);}
+  to{opacity:1; transform:translateY(0);}
+}
+
+.title-number{
+  font-family:var(--font-display);
+  font-style:italic;
+  color:var(--gold);
+  font-size:1.15rem;
+  min-width:22px;
+  flex-shrink:0;
+}
+
+.title-text{
+  font-family:var(--font-display);
+  font-size:1.05rem;
+  color:var(--cream);
+  flex:1;
+}
+
+.copy-btn{
+  background:none;
+  border:none;
+  color:var(--muted);
+  font-family:var(--font-body);
+  font-size:0.82rem;
+  cursor:pointer;
+  padding:2px 0;
+  flex-shrink:0;
+  transition:color 0.15s ease;
+}
+
+.copy-btn:hover{color:var(--gold-bright);}
+
+.roadmap-note{
+  margin-top:28px;
+  color:var(--muted);
+  font-size:0.85rem;
+  border-top:1px solid var(--line);
+  padding-top:16px;
+}
+
+details.history{margin-top:40px;}
+
+summary{
+  cursor:pointer;
+  color:var(--muted);
+  font-size:0.88rem;
+  padding:8px 0;
+}
+
+summary:hover{color:var(--gold-bright);}
+
+.history-item{
+  padding:12px 0;
+  border-bottom:1px solid var(--line);
+  cursor:pointer;
+}
+
+.history-item:hover .history-theme{color:var(--gold-bright);}
+
+.history-theme{
+  font-size:0.92rem;
+  color:var(--cream);
+  transition:color 0.15s ease;
+}
+
+.history-date{
+  font-size:0.78rem;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+.history-empty{
+  color:var(--muted);
+  font-size:0.85rem;
+  padding:8px 0;
+}
+
+html{scroll-behavior:smooth;}
+
+.hero{padding-top:4px;}
+
+.headline{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-weight:500;
+  font-size:1.65rem;
+  line-height:1.28;
+  color:var(--cream);
+  margin-top:24px;
+  max-width:19ch;
+}
+
+.subhead{
+  color:var(--muted);
+  font-size:0.98rem;
+  margin-top:14px;
+  max-width:38ch;
+}
+
+.cta-btn{
+  display:inline-block;
+  margin-top:22px;
+  background:var(--gold);
+  color:var(--bg);
+  text-decoration:none;
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:0.95rem;
+  padding:12px 22px;
+  border-radius:4px;
+  transition:background 0.15s ease;
+}
+
+.cta-btn:hover{background:var(--gold-bright);}
+
+.trust-note{
+  color:var(--muted);
+  font-size:0.8rem;
+  margin-top:10px;
+}
+
+.pourquoi{
+  margin-top:40px;
+  padding-top:28px;
+  border-top:1px solid var(--line);
+}
+
+.pourquoi p{color:var(--cream); font-size:0.98rem; max-width:42ch;}
+.pourquoi p + p{margin-top:12px; color:var(--muted);}
+
+.tool-section{scroll-margin-top:24px;}
+
+.steps{
+  margin-top:52px;
+  padding-top:28px;
+  border-top:1px solid var(--line);
+}
+
+.steps h2{
+  font-family:var(--font-display);
+  font-style:italic;
+  font-weight:500;
+  font-size:1.25rem;
+  color:var(--gold-bright);
+  margin-bottom:20px;
+}
+
+.step{
+  display:flex;
+  gap:14px;
+  padding:14px 0;
+  border-bottom:1px solid var(--line);
+}
+
+.step:last-child{border-bottom:none;}
+
+.step-num{
+  font-family:var(--font-display);
+  font-style:italic;
+  color:var(--gold);
+  font-size:1.1rem;
+  min-width:20px;
+}
+
+.step-title{color:var(--cream); font-size:0.96rem; font-weight:500;}
+.step-desc{color:var(--muted); font-size:0.88rem; margin-top:3px;}
+
+.confiance{
+  margin-top:44px;
+  padding-top:26px;
+  border-top:1px solid var(--line);
+}
+
+.confiance p{color:var(--muted); font-size:0.92rem; max-width:42ch;}
+
+.script-trigger{margin-top:20px;}
+
+button.generate.secondary{
+  background:var(--gold);
+  color:var(--bg);
+}
+
+button.generate.secondary:hover:not(:disabled){background:var(--gold-bright);}
+
+.script-results{margin-top:28px;}
+
+.scene-block{
+  padding:18px 0;
+  border-bottom:1px solid var(--line);
+}
+
+.scene-block:last-of-type{border-bottom:none;}
+
+.scene-num{
+  font-family:var(--font-display);
+  font-style:italic;
+  color:var(--gold);
+  font-size:1.05rem;
+  margin-bottom:10px;
+}
+
+.dialogue-line{
+  font-size:0.95rem;
+  margin-top:6px;
+  line-height:1.5;
+}
+
+.dialogue-char{
+  color:var(--gold-bright);
+  font-weight:600;
+}
+
+.dialogue-text{color:var(--cream);}
+
+.copy-scene-btn{
+  background:none;
+  border:none;
+  color:var(--muted);
+  font-family:var(--font-body);
+  font-size:0.8rem;
+  cursor:pointer;
+  padding:0;
+  margin-top:10px;
+  transition:color 0.15s ease;
+}
+
+.copy-scene-btn:hover{color:var(--gold-bright);}
+
+.copy-all-row{
+  margin-top:20px;
+  text-align:right;
+}
+
+.copy-all-btn{
+  background:none;
+  border:1px solid var(--line);
+  color:var(--muted);
+  font-family:var(--font-body);
+  font-size:0.85rem;
+  cursor:pointer;
+  padding:8px 14px;
+  border-radius:4px;
+  transition:all 0.15s ease;
+}
+
+.copy-all-btn:hover{color:var(--gold-bright); border-color:var(--gold);}
+
+.prompt-trigger{margin-top:20px;}
+
+button.generate.tertiary{
+  background:transparent;
+  border:1px solid var(--gold);
+  color:var(--gold-bright);
+}
+
+button.generate.tertiary:hover:not(:disabled){background:var(--bg-raised);}
+
+.character-list{
+  margin-bottom:22px;
+  padding-bottom:18px;
+  border-bottom:1px solid var(--line);
+}
+
+.character-item{margin-top:8px; font-size:0.9rem;}
+.character-name{color:var(--gold-bright); font-weight:600;}
+.character-desc{color:var(--muted);}
+
+.prompt-block{
+  padding:18px 0;
+  border-bottom:1px solid var(--line);
+}
+
+.prompt-block:last-of-type{border-bottom:none;}
+
+.prompt-label{
+  color:var(--muted);
+  font-size:0.78rem;
+  margin-top:12px;
+  margin-bottom:4px;
+}
+
+.prompt-text{
+  color:var(--cream);
+  font-size:0.88rem;
+  line-height:1.5;
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <div class="wordmark">Griot</div>
+    <p class="headline">Le griot ne cherche jamais ses mots.</p>
+    <p class="subhead">Toi non plus, avec ce générateur. Tape ton thème, reçois huit titres taillés pour arrêter le scroll, en quelques secondes.</p>
+    <a class="cta-btn" href="#outil">Essayer Griot</a>
+    <p class="trust-note">Gratuit à l'essai — aucune carte bancaire requise.</p>
+  </header>
+
+  <section class="pourquoi">
+    <p>Trouver un titre qui accroche prend du temps, surtout quand il en faut un nouveau chaque jour.</p>
+    <p>Griot génère huit angles différents à partir d'un seul thème, pour que tu passes ton temps à filmer, pas à chercher des idées.</p>
+  </section>
+
+  <div id="outil" class="tool-section">
+    <label class="field-label" for="theme-input">Thème de l'histoire</label>
+    <textarea id="theme-input" placeholder="Ex : un héritage caché révélé après la mort du père"></textarea>
+
+    <label class="field-label" for="style-select" style="margin-top:16px;">Style visuel</label>
+    <select id="style-select">
+      <option value="human">Personnages humains (drame réaliste)</option>
+      <option value="fruit">Fruits &amp; pâtisserie animés (3D style Pixar)</option>
+      <option value="miniature">Coulisses Hollywood — effets miniatures</option>
+      <option value="contes">Contes ancestraux (légende, style griot)</option>
+    </select>
+
+    <button class="generate" id="generate-btn">Générer 8 titres</button>
+  </div>
+
+  <section class="results" id="results">
+    <p class="empty-state">Tape un thème pour voir apparaître tes titres.</p>
+  </section>
+
+  <div class="script-trigger">
+    <button class="generate secondary" id="script-btn">Générer le script (10 scènes)</button>
+  </div>
+
+  <section class="script-results" id="script-results"></section>
+
+  <p class="roadmap-note">Bientôt dans Griot : prompts images et vidéos, à partir du même thème et du même script.</p>
+
+  <div class="prompt-trigger">
+    <button class="generate tertiary" id="prompts-btn">Générer les prompts images &amp; vidéo</button>
+  </div>
+
+  <section class="prompt-results" id="prompt-results"></section>
+
+  <section class="steps">
+    <h2>Comment ça marche</h2>
+    <div class="step">
+      <span class="step-num">1</span>
+      <div>
+        <div class="step-title">Tape ton thème</div>
+        <div class="step-desc">Un conflit familial, une trahison, un secret révélé — en une phrase.</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">2</span>
+      <div>
+        <div class="step-title">Griot génère huit titres</div>
+        <div class="step-desc">Chacun avec un angle différent : révélation, dialogue, compte à rebours, confession.</div>
+      </div>
+    </div>
+    <div class="step">
+      <span class="step-num">3</span>
+      <div>
+        <div class="step-title">Choisis et publie</div>
+        <div class="step-desc">Copie celui qui te parle et lance ta production.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="confiance">
+    <p>Griot vient d'un vrai pipeline de production de contenu dramatique, déjà utilisé pour publier des histoires en français pensées pour un public ouest-africain. Ce n'est pas un générateur générique.</p>
+  </section>
+
+  <details class="history">
+    <summary>Historique des générations</summary>
+    <div id="history-list"></div>
+  </details>
+</main>
+
+<script>
+const themeInput = document.getElementById('theme-input');
+const styleSelect = document.getElementById('style-select');
+
+const styleProfiles = {
+  human: {
+    titleStyle: `Emotionally charged, centered on family conflict, betrayal, secrets, or resilience, in a West African / Beninese cultural context. Should create strong curiosity, typical of viral TikTok drama series hooks.`,
+    scriptStyle: `Build emotional tension progressively across the 10 scenes toward a revelation or resolution, in the style of viral West African family drama series.`,
+    imageStyle: `Depict human characters in a West African home or setting. Use "cinematic realism" as the style descriptor — never "hyper realistic skin texture" or "shot on 35mm film". Do not describe physical contact between characters. If a child is part of the scene, keep them off-screen, represented only by voice. Avoid any wording that references violence, criminality, or explicit content — keep emotional language soft and suggestive rather than graphic.`
+  },
+  fruit: {
+    titleStyle: `A real-life-inspired human drama (never childish, magical, or silly) played by anthropomorphic fruit and pastry characters, aimed at a teen/young-adult audience: infidelity, jealousy, an unplanned pregnancy, lies, racism, betrayal, rivalry, a toxic marriage or family, a jealous best friend, a racist neighbor, a horrible customer, humiliation, a fight, seduction, a couple in crisis, a fake friend, a family secret, revenge, an arrest, a breakup, or manipulation. Tone: young, direct, sometimes crude or edgy, dramatic, occasionally funny, but always credible. If a character is racist, toxic, manipulative, or violent they must come across as clearly problematic, ridiculous, or hateful — never glorified or admirable.`,
+    scriptStyle: `Build emotional tension across the 10 scenes toward a real twist or revelation and a genuine ending, featuring anthropomorphic fruit and pastry characters with distinct personalities in a real-life-inspired human drama (dialogue only, no narration). Each character's name IS the food item itself (e.g. "Mangue", "Ananas", "Beignet", "Croissant") — never pair it with a separate human first name like "Mangue Adaeze". Every scene must show real visible action progressing the conflict (a discovery, a confrontation, someone walking out, a reveal) — never two characters simply standing in the same spot repeating dialogue. Exactly 2 dialogue lines per scene: one character speaks first, a second character replies, then the scene ends immediately — never let the first character speak again in the same scene.`,
+    imageStyle: `Every character is literally a piece of food come to life — the food item's own shape IS the character's body, with simple cartoon eyes and a mouth drawn directly onto it, plus small simple arms and legs. This is NOT a human wearing a costume or holding a fruit, and NOT a human character with a food-themed name — there must be no human skin, human face, or human body anywhere in the image. Each image prompt must contain NO dialogue or spoken lines, and must be one long, richly detailed, fully independent paragraph that completely redescribes every character present each time (their exact food type, color, texture, face, expression, outfit, accessories, and frozen pose) plus the complete setting (walls, floor, furniture, objects, lighting, mood) — never using shortcuts like "same room", "same outfit", or "as before" even when repeating earlier details. Capture one strong, clear visual action or confrontation, never two characters simply standing and talking. Always include: highly detailed cinematic 3D cartoon style, animated movie quality, Pixar-like expressiveness, rich textures, dramatic lighting, expressive faces, clean composition, clear body language, stylized but believable proportions, vertical 9:16.`,
+    videoStyle: `The video prompt must also be fully independent, starting by completely redescribing every character present (exact food type, color, texture, outfit, accessories) before describing the action, then embedding exactly the scene's 2 spoken lines directly in quotes with no strong punctuation inside the quotes (apostrophes are fine), each preceded by a short tone description (e.g. Strawberry says coldly in French "..."), in strict order — first character speaks, second character replies, then the scene ends immediately. Explicitly state "ONLY [name] and [name] speak in this scene, all other characters remain completely silent," and describe a real visible physical action or reaction happening while each line is spoken, plus the camera movement. Always include: cinematic 3D cartoon style, vertical 9:16, dialogue in French, no background music, dialogue-focused scene, ambient room tone only.`,
+    dialogueCount: 2,
+    longForm: true
+  },
+  contes: {
+    titleStyle: `Rooted in West African oral storytelling tradition — an ancestral legend or folktale passed down through generations. Titles should evoke mystery and epic scale, in the voice of a griot introducing a legend, while still being curiosity-driven for TikTok/YouTube.`,
+    scriptStyle: `Tell a traditional West African legend or folktale across 10 scenes, building toward a mythic revelation or moral climax, in the voice of a griot narrating ancestral wisdom. A narrator/griot character can appear alongside the legendary figures.`,
+    imageStyle: `Depict an epic, cinematic West African historical/mythical setting: traditional clothing, village or royal court, warm golden-hour lighting, "cinematic realism" style. Suggest conflict through expression and composition rather than graphic action or violence.`
+  },
+  miniature: {
+    titleStyle: `A behind-the-scenes Hollywood practical-effects shoot, where a big-budget disaster movie scene is being created using handcrafted miniature models inside a professional film studio (e.g. a miniature plane crash at an airport, a miniature skyscraper collapse, a miniature train disaster, a miniature dam bursting and flooding a model town, a miniature volcano research base explosion, a miniature bridge collapse). Titles should hype the "how they filmed it" spectacle — the craftsmanship and practical effects — rather than any character drama, and should read like a real movie-production teaser.`,
+    scriptStyle: `Describe, as a sequential shot-by-shot behind-the-scenes breakdown across 10 scenes/shots, how the film crew shoots a miniature practical-effects disaster sequence inside a real Hollywood studio: real pyrotechnics, handcrafted miniature sets, camera cranes, dolly tracks, a director and camera operators, practical-effects technicians, and safety supervisors all visibly at work. There are no dialogues between fictional characters — instead, each of the 3 "dialogue" lines per scene should be short voice-over/narrator lines (attributed to a single character called "Narrateur") describing what the crew is doing and what is happening on set at that moment, continuing naturally from the previous shot toward a single continuous production sequence.`,
+    imageStyle: `Depict the authentic making-of atmosphere of a big-budget Hollywood disaster movie, NOT the finished film: a huge professional soundstage with blue-screen walls, lighting rigs, camera cranes, dolly tracks, monitors, a director wearing headphones, camera operators, practical-effects and pyrotechnics technicians, safety supervisors, and crew members visible around a large handcrafted miniature set (detailed buildings, roads, bridges, vehicles, terrain, aged textures — clearly built by hand, never digitally generated). Use real practical effects only: live pyrotechnics, fire, smoke, dust, flying debris, breaking glass, water effects — governed by real-world physics (gravity, momentum, structural collapse, shockwaves). Vary cinematography naturally (wide establishing shots, crane shots, low/high angle, close-ups, macro shots, over-the-shoulder, appropriate focal lengths like 24mm-100mm), with professional studio and practical-fire lighting, subtle film grain, natural motion blur, and 8K-HDR documentary-style, hyperrealistic photography. Never depict finished CGI, video-game graphics, animation, or stylized/unrealistic destruction — the audience must clearly feel they are watching a real behind-the-scenes shoot, not a finished movie.`
+  }
+};
+const generateBtn = document.getElementById('generate-btn');
+const resultsEl = document.getElementById('results');
+const historyListEl = document.getElementById('history-list');
+
+async function loadHistory(){
+  try{
+    const raw = localStorage.getItem('griot_history');
+    return raw ? JSON.parse(raw) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+async function saveHistory(entries){
+  try{
+    localStorage.setItem('griot_history', JSON.stringify(entries));
+  }catch(e){
+    // L'historique est un bonus de confort ; s'il échoue, le générateur
+    // de titres continue de fonctionner normalement.
+  }
+}
+
+function renderTitles(titles){
+  resultsEl.innerHTML = '';
+  titles.forEach((title, i) => {
+    const item = document.createElement('div');
+    item.className = 'title-item';
+    item.style.animationDelay = (i * 0.05) + 's';
+    item.innerHTML = `
+      <span class="title-number">${i + 1}</span>
+      <span class="title-text"></span>
+      <button class="copy-btn">Copier</button>
+    `;
+    item.querySelector('.title-text').textContent = title;
+    const copyBtn = item.querySelector('.copy-btn');
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(title).then(() => {
+        copyBtn.textContent = 'Copié';
+        setTimeout(() => { copyBtn.textContent = 'Copier'; }, 1500);
+      });
+    });
+    resultsEl.appendChild(item);
+  });
+}
+
+function renderHistory(entries){
+  if(!entries.length){
+    historyListEl.innerHTML = '<p class="history-empty">Aucune génération pour l&#39;instant.</p>';
+    return;
+  }
+  historyListEl.innerHTML = '';
+  entries.forEach(entry => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    const date = new Date(entry.date);
+    const dateStr = date.toLocaleDateString('fr-FR', {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+    item.innerHTML = `
+      <div class="history-theme"></div>
+      <div class="history-date">${dateStr}</div>
+    `;
+    item.querySelector('.history-theme').textContent = entry.theme;
+    item.addEventListener('click', () => {
+      themeInput.value = entry.theme;
+      renderTitles(entry.titles);
+    });
+    historyListEl.appendChild(item);
+  });
+}
+
+async function generateTitles(){
+  const theme = themeInput.value.trim();
+  if(!theme){
+    resultsEl.innerHTML = '<p class="error-state">Écris d&#39;abord un thème.</p>';
+    return;
+  }
+
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'Génération…';
+  resultsEl.innerHTML = '<p class="empty-state">Génération en cours…</p>';
+
+  const profile = styleProfiles[styleSelect.value];
+
+  const metaPrompt = `You are a viral content strategist for French-speaking West African TikTok and YouTube channels.
+
+Generate exactly 8 viral video titles in French for a short story about this theme: "${theme}"
+
+Style guidelines:
+- ${profile.titleStyle}
+- Natural, conversational French as spoken in West Africa
+- Each of the 8 titles MUST use a genuinely different hook type — mix these approaches across the 8: a shocking revelation, a piece of overheard dialogue in quotes, a countdown/timeframe ("20 ans après..."), a direct question to the viewer, a POV/confession angle, a warning/threat, a betrayal reveal, a before/after contrast. Do not reuse the same sentence structure or opening words twice.
+- No violence, no explicit content, no real people
+
+Respond with ONLY a raw JSON array of 8 strings, nothing else. No markdown code fences, no preamble, no explanation.`;
+
+  try{
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        max_tokens: 1000,
+        messages: [{role: "user", content: metaPrompt}]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const titles = JSON.parse(clean);
+
+    renderTitles(titles);
+
+    const history = await loadHistory();
+    history.unshift({theme, titles, date: Date.now()});
+    const trimmed = history.slice(0, 20);
+    await saveHistory(trimmed);
+    renderHistory(trimmed);
+
+  }catch(e){
+    console.error(e);
+    resultsEl.innerHTML = '<p class="error-state">La génération n&#39;a pas abouti — réessaie.</p>';
+  }finally{
+    generateBtn.disabled = false;
+    generateBtn.textContent = 'Générer 8 titres';
+  }
+}
+
+generateBtn.addEventListener('click', generateTitles);
+
+const scriptBtn = document.getElementById('script-btn');
+const scriptResultsEl = document.getElementById('script-results');
+
+let currentScript = null;
+
+function formatScene(scene){
+  return scene.dialogues.map(d => `${d.character}: ${d.line}`).join('\n');
+}
+
+function renderScript(scenes){
+  scriptResultsEl.innerHTML = '';
+  scenes.forEach(scene => {
+    const block = document.createElement('div');
+    block.className = 'scene-block';
+    const dialoguesHtml = scene.dialogues.map(d =>
+      `<div class="dialogue-line"><span class="dialogue-char"></span> <span class="dialogue-text"></span></div>`
+    ).join('');
+    block.innerHTML = `<div class="scene-num">Scène ${scene.scene}</div>${dialoguesHtml}<button class="copy-scene-btn">Copier la scène</button>`;
+    const lineEls = block.querySelectorAll('.dialogue-line');
+    scene.dialogues.forEach((d, i) => {
+      lineEls[i].querySelector('.dialogue-char').textContent = d.character + ' :';
+      lineEls[i].querySelector('.dialogue-text').textContent = d.line;
+    });
+    block.querySelector('.copy-scene-btn').addEventListener('click', (e) => {
+      navigator.clipboard.writeText(formatScene(scene)).then(() => {
+        e.target.textContent = 'Copié';
+        setTimeout(() => { e.target.textContent = 'Copier la scène'; }, 1500);
+      });
+    });
+    scriptResultsEl.appendChild(block);
+  });
+
+  const copyAllRow = document.createElement('div');
+  copyAllRow.className = 'copy-all-row';
+  copyAllRow.innerHTML = '<button class="copy-all-btn">Copier tout le script</button>';
+  copyAllRow.querySelector('.copy-all-btn').addEventListener('click', (e) => {
+    const full = scenes.map(s => `Scène ${s.scene}\n${formatScene(s)}`).join('\n\n');
+    navigator.clipboard.writeText(full).then(() => {
+      e.target.textContent = 'Copié';
+      setTimeout(() => { e.target.textContent = 'Copier tout le script'; }, 1500);
+    });
+  });
+  scriptResultsEl.appendChild(copyAllRow);
+}
+
+async function generateScript(){
+  const theme = themeInput.value.trim();
+  if(!theme){
+    scriptResultsEl.innerHTML = '<p class="error-state">Écris d&#39;abord un thème, en haut.</p>';
+    return;
+  }
+
+  scriptBtn.disabled = true;
+  scriptBtn.textContent = 'Écriture du script…';
+  scriptResultsEl.innerHTML = '<p class="empty-state">Écriture en cours, ça prend un peu plus de temps…</p>';
+
+  const scriptProfile = styleProfiles[styleSelect.value];
+  const dCount = scriptProfile.dialogueCount || 3;
+  const dialogueExampleArr = Array(dCount).fill('{"character":"Nom","line":"..."}').join(',');
+
+  const metaPrompt = `You are a scriptwriter for French-speaking West African TikTok and YouTube channels.
+
+Write a complete 10-scene dialogue script in French based on this theme: "${theme}"
+
+Requirements:
+- Exactly 10 scenes
+- Each scene has exactly ${dCount} line${dCount > 1 ? 's' : ''} of dialogue
+- Each dialogue line has a character name (invent culturally appropriate names fitting the style below) and their spoken line, in natural conversational French as spoken in West Africa
+- ${scriptProfile.scriptStyle}
+- No stage directions, dialogue only
+- No violence, no explicit content, no real people
+
+Respond with ONLY a raw JSON array of exactly 10 objects, nothing else. No markdown code fences, no preamble. Format: [{"scene":1,"dialogues":[${dialogueExampleArr}]}, ...]`;
+
+  try{
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        max_tokens: 4000,
+        messages: [{role: "user", content: metaPrompt}]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const scenes = JSON.parse(clean);
+
+    currentScript = scenes;
+    renderScript(scenes);
+
+  }catch(e){
+    console.error(e);
+    scriptResultsEl.innerHTML = '<p class="error-state">L&#39;écriture du script n&#39;a pas abouti — réessaie.</p>';
+  }finally{
+    scriptBtn.disabled = false;
+    scriptBtn.textContent = 'Générer le script (10 scènes)';
+  }
+}
+
+scriptBtn.addEventListener('click', generateScript);
+
+const promptsBtn = document.getElementById('prompts-btn');
+const promptResultsEl = document.getElementById('prompt-results');
+
+function renderPrompts(data){
+  promptResultsEl.innerHTML = '';
+
+  const charList = document.createElement('div');
+  charList.className = 'character-list';
+  let charHtml = '';
+  data.characters.forEach(c => {
+    charHtml += `<div class="character-item"><span class="character-name"></span> <span class="character-desc"></span></div>`;
+  });
+  charList.innerHTML = charHtml;
+  const charItems = charList.querySelectorAll('.character-item');
+  data.characters.forEach((c, i) => {
+    charItems[i].querySelector('.character-name').textContent = c.name + ' :';
+    charItems[i].querySelector('.character-desc').textContent = c.description;
+  });
+  promptResultsEl.appendChild(charList);
+
+  data.scenes.forEach(scene => {
+    const block = document.createElement('div');
+    block.className = 'prompt-block';
+    block.innerHTML = `
+      <div class="scene-num">Scène ${scene.scene}</div>
+      <div class="prompt-label">Prompt image</div>
+      <div class="prompt-text image-prompt-text"></div>
+      <button class="copy-scene-btn copy-image-btn">Copier le prompt image</button>
+      <div class="prompt-label">Prompt vidéo</div>
+      <div class="prompt-text video-prompt-text"></div>
+      <button class="copy-scene-btn copy-video-btn">Copier le prompt vidéo</button>
+    `;
+    block.querySelector('.image-prompt-text').textContent = scene.image_prompt;
+    block.querySelector('.video-prompt-text').textContent = scene.video_prompt;
+    block.querySelector('.copy-image-btn').addEventListener('click', (e) => {
+      navigator.clipboard.writeText(scene.image_prompt).then(() => {
+        e.target.textContent = 'Copié';
+        setTimeout(() => { e.target.textContent = 'Copier le prompt image'; }, 1500);
+      });
+    });
+    block.querySelector('.copy-video-btn').addEventListener('click', (e) => {
+      navigator.clipboard.writeText(scene.video_prompt).then(() => {
+        e.target.textContent = 'Copié';
+        setTimeout(() => { e.target.textContent = 'Copier le prompt vidéo'; }, 1500);
+      });
+    });
+    promptResultsEl.appendChild(block);
+  });
+}
+
+async function generatePrompts(){
+  if(!currentScript){
+    promptResultsEl.innerHTML = '<p class="error-state">Génère d&#39;abord le script, juste au-dessus.</p>';
+    return;
+  }
+
+  promptsBtn.disabled = true;
+  promptsBtn.textContent = 'Génération des prompts…';
+  promptResultsEl.innerHTML = '<p class="empty-state">Génération en cours, ça prend un peu de temps…</p>';
+
+  const promptProfile = styleProfiles[styleSelect.value];
+  const styleInstructions = promptProfile.imageStyle;
+  const videoInstructions = promptProfile.videoStyle || '';
+  const lengthInstruction = promptProfile.longForm
+    ? `Each image_prompt and video_prompt must be a single long, richly detailed paragraph (at least 6-8 sentences) that independently and completely redescribes every character's exact visual type, texture/color, face, expression, outfit, accessories, and pose, and the full setting (walls, floor, furniture, lighting, mood) every single time — with no shortcuts like "same room" or "as before". Keep each character description to one to two sentences.`
+    : `Keep each image_prompt and video_prompt concise: 2-3 sentences maximum. Keep each character description to one sentence.`;
+
+  const metaPrompt = `You are an AI prompt engineer preparing Google Flow prompts for a French-language TikTok/YouTube Shorts drama series.
+
+Here is the 10-scene script (JSON): ${JSON.stringify(currentScript)}
+
+For each of the 10 scenes, write:
+1. An English image-generation prompt describing the visual moment: setting, characters present, expressions, body language, warm naturalistic lighting, no dialogue or spoken text in this prompt. ${styleInstructions}
+2. An English video-generation prompt animating that scene: describe camera framing and movement in English, and embed the scene's French dialogue verbatim in quotes for the voice track, in the style used for Google Flow video prompts. ${videoInstructions}
+
+Also invent a short, consistent description for every uniquely named character in the script (matching the chosen visual style above), to be reused identically across every image prompt they appear in for visual consistency.
+
+${lengthInstruction}
+
+Respond with ONLY raw JSON in this exact shape, nothing else, no markdown fences, no preamble:
+{"characters":[{"name":"...","description":"..."}],"scenes":[{"scene":1,"image_prompt":"...","video_prompt":"..."}]}`;
+
+  try{
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        max_tokens: promptProfile.longForm ? 16000 : 8000,
+        messages: [{role: "user", content: metaPrompt}]
+      })
+    });
+
+    const data = await response.json();
+    const text = data.content.map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    renderPrompts(parsed);
+
+  }catch(e){
+    console.error(e);
+    promptResultsEl.innerHTML = '<p class="error-state">La génération des prompts n&#39;a pas abouti — réessaie.</p>';
+  }finally{
+    promptsBtn.disabled = false;
+    promptsBtn.textContent = 'Générer les prompts images & vidéo';
+  }
+}
+
+promptsBtn.addEventListener('click', generatePrompts);
+
+loadHistory().then(renderHistory);
+</script>
+</body>
+</html>
