@@ -853,41 +853,95 @@ async function generatePrompts(){
     ? `Each image_prompt and video_prompt must be a single long, richly detailed paragraph (at least 6-8 sentences) that independently and completely redescribes every character's exact visual type, texture/color, face, expression, outfit, accessories, and pose, and the full setting (walls, floor, furniture, lighting, mood) every single time — with no shortcuts like "same room" or "as before". Keep each character description to one to two sentences.`
     : `Keep each image_prompt and video_prompt concise: 2-3 sentences maximum. Keep each character description to one sentence.`;
 
-  const metaPrompt = `You are an AI prompt engineer preparing Google Flow prompts for a French-language TikTok/YouTube Shorts drama series.
-
-Here is the 10-scene script (JSON): ${JSON.stringify(currentScript)}
-
-For each of the 10 scenes, write:
-1. An English image-generation prompt describing the visual moment: setting, characters present, expressions, body language, warm naturalistic lighting, no dialogue or spoken text in this prompt. ${styleInstructions}
-2. An English video-generation prompt animating that scene: describe camera framing and movement in English, and embed the scene's French dialogue verbatim in quotes for the voice track, in the style used for Google Flow video prompts. ${videoInstructions}
-
-Also invent a short, consistent description for every uniquely named character in the script (matching the chosen visual style above), to be reused identically across every image prompt they appear in for visual consistency.
-
-${lengthInstruction}
-
-Respond with ONLY raw JSON in this exact shape, nothing else, no markdown fences, no preamble:
-{"characters":[{"name":"...","description":"..."}],"scenes":[{"scene":1,"image_prompt":"...","video_prompt":"..."}]}`;
+  // On découpe la génération en petits lots : un seul gros appel (10 scènes,
+  // prompts longs) dépasse souvent la limite de temps du serveur (60s sur le
+  // plan gratuit Vercel) et échoue silencieusement. Des lots plus petits
+  // réussissent presque toujours et permettent d'afficher une progression.
+  const chunkSize = promptProfile.longForm ? 3 : 5;
+  const chunks = [];
+  for(let i = 0; i < currentScript.length; i += chunkSize){
+    chunks.push(currentScript.slice(i, i + chunkSize));
+  }
 
   try{
-    const response = await fetch("/api/generate", {
+    // Étape 1 : décrire une bonne fois pour toutes chaque personnage, pour
+    // qu'il garde le même visuel dans tous les lots suivants.
+    promptsBtn.textContent = 'Préparation des personnages…';
+    promptResultsEl.innerHTML = '<p class="empty-state">Préparation des personnages…</p>';
+
+    const charPrompt = `You are an AI prompt engineer preparing prompts for a French-language TikTok/YouTube Shorts drama series.
+
+Here is the full 10-scene script (JSON): ${JSON.stringify(currentScript)}
+
+Invent a short, consistent visual description for every uniquely named character in the script, matching this visual style: ${styleInstructions}
+This description will be reused identically across every image prompt they appear in, for visual consistency.
+
+Respond with ONLY raw JSON in this exact shape, nothing else, no markdown fences, no preamble:
+{"characters":[{"name":"...","description":"..."}]}`;
+
+    const charResponse = await fetch("/api/generate", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({
-        max_tokens: promptProfile.longForm ? 16000 : 8000,
-        messages: [{role: "user", content: metaPrompt}]
+        max_tokens: 1500,
+        messages: [{role: "user", content: charPrompt}]
       })
     });
+    const charData = await charResponse.json();
+    if(!charResponse.ok){
+      throw new Error(charData.error?.message || 'Erreur lors de la préparation des personnages.');
+    }
+    const charText = charData.content.map(b => b.text || '').join('');
+    const charClean = charText.replace(/```json|```/g, '').trim();
+    const characters = (JSON.parse(charClean).characters) || [];
 
-    const data = await response.json();
-    const text = data.content.map(b => b.text || '').join('');
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    // Étape 2 : générer les prompts scène par petits lots.
+    let allScenes = [];
+    for(let i = 0; i < chunks.length; i++){
+      const batch = chunks[i];
+      promptsBtn.textContent = `Génération des prompts… (${i + 1}/${chunks.length})`;
+      promptResultsEl.innerHTML = `<p class="empty-state">Génération en cours, lot ${i + 1} sur ${chunks.length}…</p>`;
 
-    renderPrompts(parsed);
+      const metaPrompt = `You are an AI prompt engineer preparing Google Flow prompts for a French-language TikTok/YouTube Shorts drama series.
+
+These characters must be described EXACTLY and consistently as follows in every prompt below: ${JSON.stringify(characters)}
+
+Here are ${batch.length} scene(s) from the script (JSON) to write prompts for: ${JSON.stringify(batch)}
+
+For each of these scenes, write:
+1. An English image-generation prompt describing the visual moment: setting, characters present, expressions, body language, warm naturalistic lighting, no dialogue or spoken text in this prompt. ${styleInstructions}
+2. An English video-generation prompt animating that scene: describe camera framing and movement in English, and embed the scene's French dialogue verbatim in quotes for the voice track, in the style used for Google Flow video prompts. ${videoInstructions}
+
+${lengthInstruction}
+
+Respond with ONLY raw JSON in this exact shape, nothing else, no markdown fences, no preamble, one entry per scene above, keeping the original "scene" numbers:
+{"scenes":[{"scene":1,"image_prompt":"...","video_prompt":"..."}]}`;
+
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          max_tokens: promptProfile.longForm ? 6000 : 4000,
+          messages: [{role: "user", content: metaPrompt}]
+        })
+      });
+
+      const data = await response.json();
+      if(!response.ok){
+        throw new Error(data.error?.message || `Erreur lors du lot ${i + 1}.`);
+      }
+      const text = data.content.map(b => b.text || '').join('');
+      const clean = text.replace(/```json|```/g, '').trim();
+      const parsedBatch = JSON.parse(clean);
+      allScenes = allScenes.concat(parsedBatch.scenes || []);
+    }
+
+    renderPrompts({characters, scenes: allScenes});
 
   }catch(e){
     console.error(e);
-    promptResultsEl.innerHTML = '<p class="error-state">La génération des prompts n&#39;a pas abouti — réessaie.</p>';
+    const detail = (e && e.message) ? ` (${e.message})` : '';
+    promptResultsEl.innerHTML = `<p class="error-state">La génération des prompts n&#39;a pas abouti — réessaie.${detail}</p>`;
   }finally{
     promptsBtn.disabled = false;
     promptsBtn.textContent = 'Générer les prompts images & vidéo';
